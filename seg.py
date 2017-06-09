@@ -18,7 +18,9 @@ for k, v in data.iteritems():
 
             #if title == u'\u516c\u544a' or title == u'\u5916\u96fb' or title == u'\u5916\u7d6e':
             #    continue
-            if title != u'\u65b0\u805e':
+            #if title != u'\u65b0\u805e':
+            #    continue
+            if title != u'新聞' and title != u'情報' and title != u'討論' and title != u'專欄':
                 continue
             #print "{'title' : ",
             print i['article_title'].encode('utf-8'),

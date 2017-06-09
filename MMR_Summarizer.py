@@ -62,6 +62,19 @@ def getBestWords(n, score):
     '''
     return word
 
+def doc_sim(query, tF, dF, dlen):
+    s = 0
+    global d_query
+    for w in query:
+        if w in d_query:
+            continue
+        try:
+            s += (tF[w] / len(dF[w])) / dlen
+        except:
+            print tF[w], dlen, len(dF[w]), w
+            sys.exit()
+    return s
+
 def sim(query, tF, dF, dlen):
     s = 0
     for w in query:
@@ -132,7 +145,7 @@ def MR(gamma, tF, query , dF, doc_len, selected_doc, a_tF):
         q = []
         for key, val in a_tF[d].iteritems():
             q.append(key)
-        right_values.append( (1 - gamma) * sim(q, tF, dF, doc_len))
+        right_values.append( (1 - gamma) * doc_sim(q, tF, dF, doc_len))
             
     right_of_minus = max(right_values)
         
@@ -152,7 +165,7 @@ doc_len = defaultdict(float)
 detail = dict()
 
 cur = 0
-with open(sys.argv[1]) as f:
+with open(sys.argv[2]) as f:
     l = f.readlines()
     for line in l:
         line = line.split('//*//')
@@ -163,7 +176,8 @@ with open(sys.argv[1]) as f:
         other.append(line[3])
         detail[cur] = other
         content = line[1].split()
-        for w in content:
+        for word in content:
+            w = word.lower()
             doc_len[cur] += 1
             dF[w].add(cur)
             tF[cur][w] += 1
@@ -187,17 +201,23 @@ for root, dirs, files in os.walk(cluster_path):
 
 #query = makeQuery(n, wF, dF)
 #query = [u'Westbrook', '衛斯布魯克', '西河', '大三元', u'50', '連續', '歷史',  u'42']
-query = [u'Westbrook', '衛斯布魯克', '西河']
+d_query = ['西河']
+for i in range(100):
+    try:
+        d_query.append(sys.argv[3+i])
+    except:
+        break
 
 # pick a sentence that best matches our query
-best_doc = getBest(tF, query, dF, doc_len)
+best_doc = getBest(tF, d_query, dF, doc_len)
 '''
 print best_doc, detail[best_doc][0]
 print detail[best_doc][1]
 print detail[best_doc][3]
 '''
 # build a summary by adding more relevant sentences
-summary = makeSummary(0.8, tF, query, best_doc, dF, doc_len, 4)
+gamma = float(sys.argv[1])
+summary = makeSummary(gamma, tF, d_query, best_doc, dF, doc_len, 4)
 
 for d in summary:
     print d, detail[d][0]
