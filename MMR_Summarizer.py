@@ -4,6 +4,11 @@ import math
 import sys
 from collections import defaultdict
 import operator
+from pytrends.request import TrendReq
+import pandas
+import time
+import datetime
+from dateutil import parser
 
 # Method to compute every word's TF.IDF value in a given cluster
 def TF_IDF(wF, dF):
@@ -75,7 +80,7 @@ def doc_sim(query, tF, dF, dlen):
             sys.exit()
     return s
 
-def sim(query, tF, dF, dlen):
+def sim(query, tF, dF, dlen, doc):
     s = 0
     for w in query:
         try:
@@ -83,7 +88,8 @@ def sim(query, tF, dF, dlen):
         except:
             print tF[w], dlen, len(dF[w]), w
             sys.exit()
-    return s
+    global avg, t_factor
+    return s * (t_factor[doc] / avg)
 
 # Method to get the single Best matching sentence
 def getBest(tF, query, dF, dlen):
@@ -94,7 +100,7 @@ def getBest(tF, query, dF, dlen):
     # loop through all sentences
     for key, val  in tF.iteritems():
         #print val
-        similarity = sim(query, val, dF, dlen[key])
+        similarity = sim(query, val, dF, dlen[key], key)
 
         # take note of the best matching sentence
         if similarity > prev:
@@ -120,7 +126,7 @@ def makeSummary(gamma, tF, query, best_doc, dF, doc_len, n):
             # get the marginal relevance of a query
             if key in selected_doc :
                 continue
-            curr = MR(gamma, val, query, dF, doc_len[key], selected_doc, tF)
+            curr = MR(gamma, val, query, dF, doc_len[key], selected_doc, tF, key)
                     
             # set this sentence as the next best sentence if its' marginal releveance is better than the
             # current best
@@ -134,10 +140,10 @@ def makeSummary(gamma, tF, query, best_doc, dF, doc_len, n):
     return selected_doc
     
 # Method to compute the MR value for a given sentence
-def MR(gamma, tF, query , dF, doc_len, selected_doc, a_tF):
+def MR(gamma, tF, query , dF, doc_len, selected_doc, a_tF, doc):
     
 
-    left_of_minus = gamma * sim(query, tF, dF, doc_len)
+    left_of_minus = gamma * sim(query, tF, dF, doc_len, doc)
     
     right_values = [float("-inf")]
         
@@ -157,6 +163,26 @@ def MR(gamma, tF, query , dF, doc_len, selected_doc, a_tF):
 #cluster_path = sys.argv[3]
 
 # open all files in the user specified directory
+google_username = "iboom579"
+google_password = "iboom579gmail"
+pytrends = TrendReq(google_username, google_password, hl='en-US', tz=-480, custom_useragent='My Pytrends Script')
+pytrends.build_payload(kw_list=['Westbrook'], timeframe='today 5-y')
+
+tmp = pytrends.interest_over_time()['Westbrook'].to_dict()
+trend = defaultdict(float)
+for key, val in tmp.iteritems():
+    trend[key.to_pydatetime().date()] = val
+
+start = datetime.datetime(2017,6,4)
+_sum = 0
+_l = []
+for i in range(35):
+    _sum += trend[(start-datetime.timedelta(7*i)).date()]
+    _l.append(trend[(start-datetime.timedelta(7*i)).date()])
+avg = _sum / 35.0
+print 'avg : ', avg
+print 'max : ', max(_l)
+print 'min : ', min(_l)
 
 tF = defaultdict(lambda: defaultdict(float))
 dF = defaultdict(set)
@@ -164,11 +190,14 @@ wF = defaultdict(float)
 doc_len = defaultdict(float)
 detail = dict()
 
+t_factor = defaultdict(float)
 cur = 0
 with open(sys.argv[2]) as f:
     l = f.readlines()
     for line in l:
         line = line.split('//*//')
+        if line[0] == ' ':
+            continue
         other = []
         other.append(line[0])
         other.append(line[1])
@@ -176,6 +205,10 @@ with open(sys.argv[2]) as f:
         other.append(line[3])
         detail[cur] = other
         content = line[1].split()
+        t = parser.parse(line[2])
+        t += datetime.timedelta(days=(6 - t.weekday()))
+        t_factor[cur] = trend[t.date()]
+
         for word in content:
             w = word.lower()
             doc_len[cur] += 1
@@ -224,5 +257,7 @@ for d in summary:
     print detail[d][1]
     print detail[d][2]
     print detail[d][3]
+    print t_factor[d]
+    print
 
 
