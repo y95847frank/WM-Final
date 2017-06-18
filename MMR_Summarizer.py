@@ -1,4 +1,5 @@
 #-*-coding:utf-8 -*-
+from __future__ import division
 import os
 import math
 import sys
@@ -68,27 +69,21 @@ def getBestWords(n, score):
     return word
 
 def doc_sim(query, tF, dF, dlen):
-    s = 0
+    s = 0.0
     global d_query
     for w in query:
+        tmp = (tF[w] / len(dF[w])) / dlen
         if w in d_query:
-            continue
-        try:
-            s += (tF[w] / len(dF[w])) / dlen
-        except:
-            print tF[w], dlen, len(dF[w]), w
-            sys.exit()
+            tmp *= 0.3
+        s += tmp
     return s
 
 def sim(query, tF, dF, dlen, doc):
-    s = 0
+    s = 0.0
     for w in query:
-        try:
-            s += (tF[w] / len(dF[w])) / dlen
-        except:
-            print tF[w], dlen, len(dF[w]), w
-            sys.exit()
+        s += (tF[w] / len(dF[w])) / dlen
     global avg, t_factor
+    
     return s * (t_factor[doc] / avg)
 
 # Method to get the single Best matching sentence
@@ -108,14 +103,16 @@ def getBest(tF, query, dF, dlen):
             prev = similarity
                     
     # select the chosen best matching sentence from original data
+    global score_list
+    score_list[best_sent] = similarity
     return best_sent
-
 
 # Method to find n sentences with the best MR values
 def makeSummary(gamma, tF, query, best_doc, dF, doc_len, n):
     # local variables
     selected_doc = [best_doc]
-        
+    
+    global score_list
     for i in range(n):
         best_line = None
         prev = float("-inf")
@@ -136,6 +133,7 @@ def makeSummary(gamma, tF, query, best_doc, dF, doc_len, n):
                     
         # update our selected sentences and summary            
         selected_doc += [best_line]
+        score_list[best_line] = curr
             
     return selected_doc
     
@@ -192,6 +190,15 @@ detail = dict()
 
 t_factor = defaultdict(float)
 cur = 0
+
+name_list = dict()
+with open(sys.argv[3]) as n:
+    l = n.readlines()
+    for li in l:
+        li = li.split()
+        name_list[li[1]] = li[0]
+
+
 with open(sys.argv[2]) as f:
     l = f.readlines()
     for line in l:
@@ -210,6 +217,8 @@ with open(sys.argv[2]) as f:
         t_factor[cur] = trend[t.date()]
 
         for word in content:
+            if word in name_list:
+                word = name_list[word]
             w = word.lower()
             doc_len[cur] += 1
             dF[w].add(cur)
@@ -234,14 +243,15 @@ for root, dirs, files in os.walk(cluster_path):
 
 #query = makeQuery(n, wF, dF)
 #query = [u'Westbrook', '衛斯布魯克', '西河', '大三元', u'50', '連續', '歷史',  u'42']
-d_query = ['西河']
+d_query = ['westbrook']
 for i in range(100):
     try:
-        d_query.append(sys.argv[3+i])
+        d_query.append(sys.argv[4+i])
     except:
         break
 
 # pick a sentence that best matches our query
+score_list = {}
 best_doc = getBest(tF, d_query, dF, doc_len)
 '''
 print best_doc, detail[best_doc][0]
@@ -257,6 +267,7 @@ for d in summary:
     print detail[d][1]
     print detail[d][2]
     print detail[d][3]
+    print score_list[d]
     print t_factor[d]
     print
 
