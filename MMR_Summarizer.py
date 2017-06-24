@@ -17,22 +17,6 @@ def TF_IDF(wF, dF):
     for k, val in wF.iteritems():
         retval[k] = val * (1 / len(dF[k]))
     # Method variables
-    '''
-    tfs = self.sim.TFs(sentences)
-        
-    retval = {}
-
-    # for every word
-    for word in tfs:
-        #calculate every word's tf-idf score
-        tf_idfs=  tfs[word] * idfs[word]
-        
-        # add word and its tf-idf score to dictionary
-        if retval.get(tf_idfs, None) == None:
-            retval[tf_idfs] = [word]
-        else:
-            retval[tf_idfs].append(word)
-    '''
     return retval
 
 
@@ -52,27 +36,13 @@ def getBestWords(n, score):
         count += 1
         if count >= n:
             break
-    '''
-    best_scores  = scored_words.keys()
-    best_scores.sort()
-    best_words = []
-
-    # loop through the list in reverse order
-    for i in range(-1, -n, -1):
-            
-        words = scored_words[best_scores[i]] #returns a list of words
-        for word in words:
-            if i >-n:
-                best_words.append(word)
-                i = i-1
-    '''
     return word
 
 def doc_sim(query, tF, dF, dlen):
     s = 0.0
     global d_query
     for w in query:
-        tmp = (tF[w] / len(dF[w])) / dlen
+        tmp = (tF[w] / math.log(len(dF[w]))) / dlen
         if w in d_query:
             tmp *= 0.3
         s += tmp
@@ -81,7 +51,7 @@ def doc_sim(query, tF, dF, dlen):
 def sim(query, tF, dF, dlen, doc):
     s = 0.0
     for w in query:
-        s += (tF[w] / len(dF[w])) / dlen
+        s += (tF[w] / math.log(len(dF[w]))) / dlen
     global avg, t_factor
     
     return s * (t_factor[doc] / avg)
@@ -118,12 +88,13 @@ def makeSummary(gamma, tF, query, best_doc, dF, doc_len, n):
         prev = float("-inf")
             
         # go through all sentences
+        g2 = gamma - i* 0.025
         for key, val in tF.iteritems():
                     
             # get the marginal relevance of a query
             if key in selected_doc :
                 continue
-            curr = MR(gamma, val, query, dF, doc_len[key], selected_doc, tF, key)
+            curr = MR(g2, val, query, dF, doc_len[key], selected_doc, tF, key)
                     
             # set this sentence as the next best sentence if its' marginal releveance is better than the
             # current best
@@ -226,20 +197,6 @@ with open(sys.argv[2]) as f:
             wF[w] += 1
         cur += 1
 
-'''
-for root, dirs, files in os.walk(cluster_path):
-    for name in files:
-        with open(os.path.join(root, name)) as f:
-            content = f.readlines()
-        content = [x.strip() for x in content]
-        for word in content:
-            word = word.split()
-            for w in word:
-                dF[w].add(name)
-                tF[name][w] += 1
-                wF[w] += 1
-'''
-# build a query
 
 #query = makeQuery(n, wF, dF)
 #query = [u'Westbrook', '衛斯布魯克', '西河', '大三元', u'50', '連續', '歷史',  u'42']
@@ -259,7 +216,9 @@ print detail[best_doc][1]
 print detail[best_doc][3]
 '''
 # build a summary by adding more relevant sentences
-gamma = float(sys.argv[1])
+
+#gamma = float(sys.argv[1])
+gamma = 1.0
 summary = makeSummary(gamma, tF, d_query, best_doc, dF, doc_len, 4)
 
 for d in summary:
