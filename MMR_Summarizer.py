@@ -42,7 +42,7 @@ def doc_sim(query, tF, dF, dlen):
     s = 0.0
     global d_query
     for w in query:
-        tmp = (tF[w] / math.log(len(dF[w]))) / dlen
+        tmp = (tF[w] / (math.log(len(dF[w])+1))) / dlen
         if w in d_query:
             tmp *= 0.3
         s += tmp
@@ -51,7 +51,7 @@ def doc_sim(query, tF, dF, dlen):
 def sim(query, tF, dF, dlen, doc):
     s = 0.0
     for w in query:
-        s += (tF[w] / math.log(len(dF[w]))) / dlen
+        s += (tF[w] / (math.log(len(dF[w])+1))) / dlen
     global avg, t_factor
     
     return s * (t_factor[doc] / avg)
@@ -74,7 +74,7 @@ def getBest(tF, query, dF, dlen):
                     
     # select the chosen best matching sentence from original data
     global score_list
-    score_list[best_sent] = similarity
+    score_list[best_sent] = prev
     return best_sent
 
 # Method to find n sentences with the best MR values
@@ -104,7 +104,7 @@ def makeSummary(gamma, tF, query, best_doc, dF, doc_len, n):
                     
         # update our selected sentences and summary            
         selected_doc += [best_line]
-        score_list[best_line] = curr
+        score_list[best_line] = prev
             
     return selected_doc
     
@@ -120,7 +120,7 @@ def MR(gamma, tF, query , dF, doc_len, selected_doc, a_tF, doc):
         q = []
         for key, val in a_tF[d].iteritems():
             q.append(key)
-        right_values.append( (1 - gamma) * doc_sim(q, tF, dF, doc_len))
+        right_values.append( (1.0 - gamma) * doc_sim(q, tF, dF, doc_len))
             
     right_of_minus = max(right_values)
         
